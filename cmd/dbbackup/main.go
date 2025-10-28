@@ -19,10 +19,10 @@ func main() {
 	)
 
 	// Parse command line arguments
-	flag.StringVar(&source, "source", "", "Source database connection string")
-	flag.StringVar(&target, "target", "", "Target backup location")
-	flag.StringVar(&dbType, "type", "mysql", "Database type (mysql, postgres, mssql)")
-	flag.StringVar(&operation, "op", "backup", "Operation (backup, restore)")
+	flag.StringVar(&source, "source", "postgres://admin:admin123@localhost:5432/sampledb", "Source database connection string")
+	flag.StringVar(&target, "target", "./backups/backup.sql", "Target backup location")
+	flag.StringVar(&dbType, "type", "postgres", "Database type (mysql, postgres, mssql)")
+	flag.StringVar(&operation, "op", "restore", "Operation (backup, restore)")
 	flag.StringVar(&storageType, "storage", "local", "Storage type (local, s3)")
 	flag.Parse()
 
