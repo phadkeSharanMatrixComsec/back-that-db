@@ -5,88 +5,40 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 )
 
 type PostgresDriver struct {
 	host     string
-	port     string
+	port     int
 	user     string
 	password string
 	database string
 }
 
 // NewPostgresDriver creates a new PostgreSQL driver instance
-func NewPostgresDriver(connString string) (*PostgresDriver, error) {
-	// Parse connection string
-	// Format: postgres://username:password@host:port/dbname
-	// or user=foo password=bar host=baz port=5432 dbname=qux
-	var pd PostgresDriver
-
-	if strings.HasPrefix(connString, "postgres://") {
-		// URL format
-		connString = strings.TrimPrefix(connString, "postgres://")
-		parts := strings.Split(connString, "@")
-		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid connection string format")
-		}
-
-		// Parse credentials
-		creds := strings.Split(parts[0], ":")
-		if len(creds) != 2 {
-			return nil, fmt.Errorf("invalid credentials format")
-		}
-		pd.user = creds[0]
-		pd.password = creds[1]
-
-		// Parse host, port, and database
-		hostParts := strings.Split(parts[1], "/")
-		if len(hostParts) != 2 {
-			return nil, fmt.Errorf("invalid host/database format")
-		}
-
-		hostPort := strings.Split(hostParts[0], ":")
-		pd.host = hostPort[0]
-		if len(hostPort) > 1 {
-			pd.port = hostPort[1]
-		} else {
-			pd.port = "5432" // Default PostgreSQL port
-		}
-
-		pd.database = hostParts[1]
-	} else {
-		// Key-value format
-		pairs := strings.Split(connString, " ")
-		for _, pair := range pairs {
-			kv := strings.Split(pair, "=")
-			if len(kv) != 2 {
-				continue
-			}
-			switch kv[0] {
-			case "user":
-				pd.user = kv[1]
-			case "password":
-				pd.password = kv[1]
-			case "host":
-				pd.host = kv[1]
-			case "port":
-				pd.port = kv[1]
-			case "dbname":
-				pd.database = kv[1]
-			}
-		}
+// NewPostgresDriver creates a new PostgreSQL driver instance from parsed connection info
+func NewPostgresDriver(ci *ConnectionInfo) (*PostgresDriver, error) {
+	if ci == nil {
+		return nil, fmt.Errorf("connection info is nil")
 	}
 
-	// Validate required fields
+	pd := &PostgresDriver{
+		host:     ci.Host,
+		port:     ci.Port,
+		user:     ci.User,
+		password: ci.Password,
+		database: ci.Database,
+	}
+
 	if pd.host == "" || pd.user == "" || pd.database == "" {
 		return nil, fmt.Errorf("missing required connection parameters")
 	}
 
-	if pd.port == "" {
-		pd.port = "5432"
+	if pd.port == 0 {
+		pd.port = 5432
 	}
 
-	return &pd, nil
+	return pd, nil
 }
 
 // Name returns the name of the driver
@@ -105,7 +57,7 @@ func (d *PostgresDriver) Backup(outPath string) error {
 	env := []string{
 		fmt.Sprintf("PGUSER=%s", d.user),
 		fmt.Sprintf("PGHOST=%s", d.host),
-		fmt.Sprintf("PGPORT=%s", d.port),
+		fmt.Sprintf("PGPORT=%d", d.port),
 		fmt.Sprintf("PGDATABASE=%s", d.database),
 	}
 
@@ -142,7 +94,7 @@ func (d *PostgresDriver) Restore(inPath string) error {
 	env := []string{
 		fmt.Sprintf("PGUSER=%s", d.user),
 		fmt.Sprintf("PGHOST=%s", d.host),
-		fmt.Sprintf("PGPORT=%s", d.port),
+		fmt.Sprintf("PGPORT=%d", d.port),
 		fmt.Sprintf("PGDATABASE=%s", d.database),
 	}
 

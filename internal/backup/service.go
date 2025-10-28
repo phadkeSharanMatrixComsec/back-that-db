@@ -3,6 +3,7 @@ package backup
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"back-that-db/internal/drivers"
 	"back-that-db/internal/storage"
@@ -14,20 +15,26 @@ type Service struct {
 }
 
 // NewService creates a new backup service with the specified database and storage type
-func NewService(dbType, storageType, connectionString string) *Service {
+func NewService(connectionString, storageType string) *Service {
 	var driver drivers.DatabaseDriver
 	var backend storage.StorageBackend
 
-	// Initialize database driver
-	switch dbType {
-	// case "mysql":
-	// 	driver = drivers.NewMySQLDriver(connectionString)
-	case "postgres":
-		driver, _ = drivers.NewPostgresDriver(connectionString)
-	// case "mssql":
-	// 	driver, _ = drivers.NewMSSQLDriver(connectionString)
+	// Parse connection string to infer DB type and connection info
+	ci, err := drivers.ParseConnString(connectionString)
+	if err != nil {
+		panic(fmt.Sprintf("invalid connection string: %v", err))
+	}
+
+	// Initialize database driver based on inferred DB type
+	switch strings.ToLower(ci.DBType) {
+	case "postgres", "postgresql":
+		pg, err := drivers.NewPostgresDriver(ci)
+		if err != nil {
+			panic(err)
+		}
+		driver = pg
 	default:
-		panic(fmt.Sprintf("unsupported database type: %s", dbType))
+		panic(fmt.Sprintf("unsupported database type: %s", ci.DBType))
 	}
 
 	// Initialize storage backend

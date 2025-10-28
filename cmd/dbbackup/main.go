@@ -13,7 +13,6 @@ func main() {
 	var (
 		source      string
 		target      string
-		dbType      string
 		operation   string
 		storageType string
 	)
@@ -21,7 +20,7 @@ func main() {
 	// Parse command line arguments
 	flag.StringVar(&source, "source", "postgres://admin:admin123@localhost:5432/sampledb", "Source database connection string")
 	flag.StringVar(&target, "target", "./backups/backup.sql", "Target backup location")
-	flag.StringVar(&dbType, "type", "postgres", "Database type (mysql, postgres, mssql)")
+	// db type is inferred from the connection string; no explicit flag
 	flag.StringVar(&operation, "op", "restore", "Operation (backup, restore)")
 	flag.StringVar(&storageType, "storage", "local", "Storage type (local, s3)")
 	flag.Parse()
@@ -31,8 +30,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Initialize backup service
-	service := backup.NewService(dbType, storageType, source)
+	// Initialize backup service (db type inferred from source)
+	service := backup.NewService(source, storageType)
 
 	// Perform operation
 	var err error
